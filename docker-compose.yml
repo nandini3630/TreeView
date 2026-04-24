@@ -21,7 +21,7 @@ services:
           cpus: '1.0'
           memory: 1g
     healthcheck: 
-      test: ["CMD-SHELL", "echo 'SELECT 1' | /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P $$SA_PASSWORD -C"] 
+      test: ["CMD-SHELL", "echo 'SELECT 1' | /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P $$SA_PASSWORD -C -d master"] 
       interval: 10s 
       timeout: 5s 
       retries: 5
@@ -32,6 +32,9 @@ services:
       dockerfile: Dockerfile/Dockerfile.backend
       target: prod
     container_name: mybackend
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://0.0.0.0:7295
     networks:
       - backend
     ports: 
@@ -39,6 +42,12 @@ services:
     depends_on:
       mssql:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7295/WeatherForecast"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
     deploy:
       resources:
         limits:

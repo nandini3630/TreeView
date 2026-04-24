@@ -42,25 +42,36 @@ namespace TreeView
 
             app.MapControllers();
 	    
-	    using (var scope = app.Services.CreateScope())
+	    // Run database migrations at startup
+            using (var scope = app.Services.CreateScope())
             {
-              var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+              var services = scope.ServiceProvider;
+              var dbContext = services.GetRequiredService<ApplicationDbContext>();
+              var logger = services.GetRequiredService<ILogger<Program>>();
 
               var retries = 10;
               while (retries > 0)
               {
                 try
                 {
+                  logger.LogInformation("Attempting database migration...");
                   dbContext.Database.Migrate();
+                  logger.LogInformation("Database migration completed successfully.");
                   break;
                 }
-                catch
+                catch (Exception ex)
                 {
                   retries--;
-                  Thread.Sleep(5000);
+                  logger.LogError($"Database migration failed (retries left: {retries}). Error: {ex.Message}");
+                  if (retries > 0)
+                    Thread.Sleep(5000);
                 }
+              }
+              if (retries == 0)
+              {
+                logger.LogError("Database migration failed after all retries. Application may not function correctly.");
+              }
             }
-}
 	    
             app.Run();
         }
