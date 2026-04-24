@@ -1,0 +1,52 @@
+services:
+
+  mssql: 
+    image: mcr.microsoft.com/mssql/server:2022-latest 
+    container_name: mssql 
+    restart: unless-stopped
+    environment: 
+      ACCEPT_EULA: "Y" 
+      SA_PASSWORD: "Test@123Strong!"
+    volumes: 
+      - mssql_data:/var/opt/mssql
+    security_opt: 
+      - no-new-privileges:true
+    networks:
+      - backend
+    ports:
+      - 1433:1433
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1g
+    healthcheck: 
+      test: ["CMD-SHELL", "echo 'SELECT 1' | /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P $$SA_PASSWORD -C"] 
+      interval: 10s 
+      timeout: 5s 
+      retries: 5
+
+  mybackend: 
+    build:
+      context: .
+      dockerfile: Dockerfile/Dockerfile.backend
+      target: prod
+    container_name: mybackend
+    networks:
+      - backend
+    ports: 
+      - 7295:7295
+    depends_on:
+      mssql:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512m
+          pids: 200
+volumes:
+  mssql_data:
+
+networks:
+  backend:

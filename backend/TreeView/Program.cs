@@ -8,7 +8,7 @@ namespace TreeView
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
-
+            builder.WebHost.UseUrls("http://0.0.0.0:7295");
             // Add services to the container.
             builder.Services.AddCors(builder =>
             {
@@ -36,13 +36,32 @@ namespace TreeView
                 app.UseSwaggerUI();
             }
 
-            app.UseHttpsRedirection();
+            
             app.UseCors("AllowAllOrigins");
             app.UseAuthorization();
 
-
             app.MapControllers();
+	    
+	    using (var scope = app.Services.CreateScope())
+            {
+              var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
+              var retries = 10;
+              while (retries > 0)
+              {
+                try
+                {
+                  dbContext.Database.Migrate();
+                  break;
+                }
+                catch
+                {
+                  retries--;
+                  Thread.Sleep(5000);
+                }
+            }
+}
+	    
             app.Run();
         }
     }
